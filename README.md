@@ -22,8 +22,8 @@ Note: This header has not been fully tested. if there are any compilation errors
 * ``NOSTD_STRING_STD_HASH``: Enable support for ``std::hash``. (Uses ``Murmurhash2-64a``)
 * ``NOSTD_STRING_CONTAINERS_RANGES``: Enable support for C++23 ``P1206R4: Conversions from ranges to containers``.
 
-Note: Every option is enabled by default.
-Note: Every option apart from ``NOSTD_STRING_NUMERIC_CONVERSIONS`` and ``NOSTD_STRING_STD_HASH`` will be automatically disabled if required headers or functions were not found or option that they depend on is not enabled.
+Note: Every option is enabled by default.\
+Note: Every option apart from ``NOSTD_STRING_STD_HASH`` will be automatically disabled if required headers or functions were not found or option that they depend on is not enabled.
 
 ## Example usage
 ```cpp

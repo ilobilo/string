@@ -10,12 +10,12 @@
 #endif
 
 #include <initializer_list>  // for std::initializer_list
-#include <string_view>       // for std::hash, std::basic_string_view
+#include <string_view>       // for std::basic_string_view
 #include <type_traits>       // for std::is_constant_evaluated, std::declval, std::false_type
 #include <algorithm>         // for std::min, std::max
 #include <concepts>          // for std::unsigned_integral, std::signed_integral
 #include <iterator>          // for std::distance, std::next, std::iterator_traits, std::input_iterator
-#include <utility>           // for std::move
+#include <utility>           // for std::move, std::hash
 #include <compare>           // for std::strong_ordering
 #include <memory>            // for std::allocator, std::swap, std::allocator_traits
 
@@ -28,6 +28,15 @@
 
 #ifndef NOSTD_STRING_NUMERIC_CONVERSIONS
 #  define NOSTD_STRING_NUMERIC_CONVERSIONS 1
+#endif
+
+#if NOSTD_STRING_NUMERIC_CONVERSIONS && !__has_include(<cstdlib>)
+#  undef NOSTD_STRING_NUMERIC_CONVERSIONS
+#  define NOSTD_STRING_NUMERIC_CONVERSIONS 0
+#endif
+
+#if NOSTD_STRING_NUMERIC_CONVERSIONS
+#  include <cstdlib>
 #endif
 
 #ifndef NOSTD_STRING_FLOAT
@@ -103,7 +112,9 @@
 #  include <cassert>
 #  define _NOSTD_STRING_ASSERT(x, str, ...) assert(x && str)
 #elif NOSTD_STRING_FALLBACK_ABORT
-#  include <cstdlib>
+#  if !NOSTD_STRING_NUMERIC_CONVERSIONS
+#    include <cstdlib>
+#  endif
 #  define _NOSTD_STRING_ASSERT(x, ...) do { if (!(x)) { std::abort(); } } while (0)
 #else
 #  define _NOSTD_STRING_ASSERT(x, str, ...) do { if (!(x)) { NOSTD_STRING_FALLBACK_ABORT_FUNCTION (str); { while (true) { [] { } (); } } } } while (0)
@@ -177,7 +188,6 @@ namespace nostd
         Allocator _allocator;
 
 _NOSTD_STRING_DIAG_PUSH()
-
 
 #if defined(__clang__)
   _NOSTD_STRING_DIAG_IGN("-Wgnu-anonymous-struct")
