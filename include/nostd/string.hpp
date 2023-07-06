@@ -525,6 +525,7 @@ _NOSTD_STRING_DIAG_POP()
             detail::is_allocator_v<Allocator>
         ) : _allocator(a)
         {
+            _NOSTD_STRING_ASSERT(count <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(ch, count);
         }
 
@@ -538,6 +539,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string(const value_type *str, size_type count, const allocator_type &a = allocator_type()) : _allocator(a)
         {
+            _NOSTD_STRING_ASSERT(count <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(str, count);
         }
         constexpr basic_string(const value_type *str, const allocator_type &a = allocator_type()) requires (detail::is_allocator_v<Allocator>) : basic_string(str, Traits::length(str), a) { }
@@ -546,6 +548,7 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string(InputIterator first, InputIterator last, const allocator_type &a = allocator_type()) : _allocator(a)
         {
             auto len = std::distance(first, last);
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(const_pointer(first), len);
         }
 
@@ -556,7 +559,7 @@ _NOSTD_STRING_DIAG_POP()
         }
         constexpr basic_string(const basic_string &str) : basic_string(str, allocator_type()) { }
 
-        constexpr basic_string(basic_string &&str, const allocator_type &a) : _allocator(a), storage(move(str.storage))
+        constexpr basic_string(basic_string &&str, const allocator_type &a) : _allocator(a), storage(std::move(str.storage))
         {
             if (str.is_long() && a != str._allocator)
             {
@@ -574,6 +577,7 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string(std::initializer_list<value_type> ilist, const allocator_type &a = allocator_type()) : _allocator(a)
         {
             auto len = ilist.size();
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(const_pointer(ilist.begin()), len);
         }
 
@@ -587,6 +591,7 @@ _NOSTD_STRING_DIAG_POP()
 
             auto ssv = sv.substr(pos, count);
             auto len = ssv.length();
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(ssv.data(), len);
         }
 
@@ -598,6 +603,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             sview_type sv(t);
             auto len = sv.length();
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::basic_string(): constructed string size would exceed max_size()", std::length_error);
             this->internal_assign(sv.data(), len);
         }
 
@@ -664,6 +670,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string &assign(size_type count, value_type ch)
         {
+            _NOSTD_STRING_ASSERT(count <= this->max_size(), "nostd::basic_string::basic_string(): resulted string size would exceed max_size()", std::length_error);
             this->internal_assign(ch, count);
             return *this;
         }
@@ -696,6 +703,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string &assign(const value_type *str, size_type count)
         {
+            _NOSTD_STRING_ASSERT(count <= this->max_size(), "nostd::basic_string::assign(): resulted string size would exceed max_size()", std::length_error);
             this->internal_assign(str, count);
             return *this;
         }
@@ -709,14 +717,16 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &assign(InputIterator first, InputIterator last)
         {
             auto len = std::distance(first, last);
-
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::assign(): resulted string size would exceed max_size()", std::length_error);
             this->internal_assign(const_pointer(first), len);
             return *this;
         }
 
         constexpr basic_string &assign(std::initializer_list<value_type> ilist)
         {
-            this->internal_assign(const_pointer(ilist.begin()), ilist.size());
+            auto len = ilist.size();
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::assign(): resulted string size would exceed max_size()", std::length_error);
+            this->internal_assign(const_pointer(ilist.begin()), len);
             return *this;
         }
 
@@ -737,7 +747,9 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &assign(const Type &t, size_type pos, size_type count = npos)
         {
             auto sv = sview_type(t).substr(pos, count);
-            return this->assign(sv.data(), sv.length());
+            auto len = sv.length();
+            _NOSTD_STRING_ASSERT(len <= this->max_size(), "nostd::basic_string::assign(): resulted string size would exceed max_size()", std::length_error);
+            return this->assign(sv.data(), len);
         }
 
 #if NOSTD_STRING_CONTAINERS_RANGES
@@ -745,8 +757,8 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &assign_range(Range &&range)
         {
             auto str = basic_string(std::from_range, std::forward<Range>(range), this->_allocator);
-            _NOSTD_STRING_ASSERT(str.get_size() <= this->max_size(), "nostd::basic_string::assign_range(): size() > max_size()", std::length_error);
-            return assign();
+            _NOSTD_STRING_ASSERT(str.get_size() <= this->max_size(), "nostd::basic_string::assign_range(): resulted string size would exceed max_size()", std::length_error);
+            return this->assign();
         }
 #endif
 
@@ -905,7 +917,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr void reserve(size_type cap)
         {
-            _NOSTD_STRING_ASSERT(cap <= this->max_size(), "nostd::basic_string::reserve(): cap > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(cap <= this->max_size(), "nostd::basic_string::reserve(): allocated memory size would exceed max_size()", std::length_error);
             if (cap <= this->get_cap())
                 return;
 
@@ -941,7 +953,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string &insert(size_type pos, size_type count, value_type ch)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::insert(): pos out of range", std::out_of_range);
             this->insert(std::next(this->cbegin(), pos), count, ch);
             return *this;
@@ -951,14 +963,14 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::insert(): pos out of range", std::out_of_range);
             auto len = Traits::length(str);
-            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             this->internal_insert(pos, str, len);
             return *this;
         }
 
         constexpr basic_string &insert(size_type pos, const value_type *str, size_type count)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::insert(): pos out of range", std::out_of_range);
             this->internal_insert(pos, str, count);
             return *this;
@@ -966,7 +978,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string &insert(size_type pos, const basic_string &str)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert(): size() + str.size() > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::insert(): pos out of range", std::out_of_range);
             this->internal_insert(pos, const_pointer(str.get_data()), str.get_size());
             return *this;
@@ -976,7 +988,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= this->get_size() && pos_str <= str.get_size(), "nostd::basic_string::insert(): pos or pos_str out of range", std::out_of_range);
             count = std::min(count, str.length() - pos_str);
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             return this->insert(pos, str.data() + pos_str, count);
         }
 
@@ -987,7 +999,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr iterator insert(const_iterator pos, size_type count, value_type ch)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             auto spos = std::distance(this->cbegin(), pos);
             this->internal_insert(spos, ch, count);
             return std::next(this->begin(), spos);
@@ -998,14 +1010,14 @@ _NOSTD_STRING_DIAG_POP()
         {
             auto spos = std::distance(this->cbegin(), pos);
             auto len = std::distance(first, last);
-            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             this->internal_insert(spos, const_pointer(first), len);
             return std::next(this->begin(), spos);
         }
 
         constexpr iterator insert(const_iterator pos, std::initializer_list<value_type> ilist)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + ilist.size() <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + ilist.size() <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             auto spos = std::distance(this->cbegin(), pos);
             this->internal_insert(spos, const_pointer(ilist.begin()), ilist.size());
             return std::next(this->begin(), spos);
@@ -1019,7 +1031,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::insert(): pos out of range", std::out_of_range);
             sview_type sv(t);
-            _NOSTD_STRING_ASSERT(this->get_size() + sv.length() <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + sv.length() <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             this->internal_insert(pos, const_pointer(sv.data()), sv.length());
             return *this;
         }
@@ -1033,7 +1045,7 @@ _NOSTD_STRING_DIAG_POP()
             auto sv = sview_type(t);
             _NOSTD_STRING_ASSERT(pos <= this->get_size() && pos_str <= sv.length(), "nostd::basic_string::insert(): pos or pos_str out of range", std::out_of_range);
             auto ssv = sv.substr(pos_str, count);
-            _NOSTD_STRING_ASSERT(this->get_size() + ssv.length() <= this->max_size(), "nostd::basic_string::insert(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + ssv.length() <= this->max_size(), "nostd::basic_string::insert(): resulted string size would exceed max_size()", std::length_error);
             this->internal_insert(pos, const_pointer(ssv.data()), ssv.length());
             return *this;
         }
@@ -1043,8 +1055,8 @@ _NOSTD_STRING_DIAG_POP()
         constexpr iterator insert_range(const_iterator pos, Range &&range)
         {
             auto str = basic_string(std::from_range, std::forward<Range>(range), this->_allocator);
-            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert_range(): size() + range_size > max_size()", std::length_error);
-            return insert(pos - this->begin(), str);
+            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert_range(): resulted string size would exceed max_size()", std::length_error);
+            return this->insert(pos - this->begin(), str);
         }
 #endif
 
@@ -1053,7 +1065,7 @@ _NOSTD_STRING_DIAG_POP()
             auto sz = this->get_size();
             auto buffer = this->get_data();
 
-            _NOSTD_STRING_ASSERT(pos <= sz, "nostd::basic_string::erase(): pos out of range", std::length_error);
+            _NOSTD_STRING_ASSERT(pos <= sz, "nostd::basic_string::erase(): pos out of range", std::out_of_range);
 
             count = std::min(count, sz - pos);
 
@@ -1085,7 +1097,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr void push_back(value_type ch)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + 1 <= this->max_size(), "nostd::basic_string::push_back(): size() + 1 > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + 1 <= this->max_size(), "nostd::basic_string::push_back(): resulted string size would exceed max_size()", std::length_error);
             this->append(1, ch);
         }
 
@@ -1096,14 +1108,14 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr basic_string &append(size_type count, value_type ch)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::append(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(ch, count);
             return *this;
         }
 
         constexpr basic_string &append(const basic_string &str)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::append(): size() + str.size() > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(str.get_data(), str.get_size());
             return *this;
         }
@@ -1112,13 +1124,14 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= str.get_size(), "nostd::basic_string::append(): pos out of range", std::out_of_range);
             auto ssv = sview_type(str).substr(pos, count);
+            _NOSTD_STRING_ASSERT(this->get_size() + ssv.length() <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(ssv.data(), ssv.length());
             return *this;
         }
 
         constexpr basic_string &append(const value_type *str, size_type count)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::append(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(str, count);
             return *this;
         }
@@ -1126,7 +1139,7 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &append(const value_type *str)
         {
             auto len = Traits::length(str);
-            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::append(): size() + length > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             return this->append(str, len);
         }
 
@@ -1134,14 +1147,14 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &append(InputIterator first, InputIterator last)
         {
             auto len = std::distance(first, last);
-            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::append(): size() + length > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + len <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(const_pointer(first), len);
             return *this;
         }
 
         constexpr basic_string &append(std::initializer_list<value_type> ilist)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + ilist.size() <= this->max_size(), "nostd::basic_string::append(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + ilist.size() <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(const_pointer(ilist.begin()), ilist.size());
             return *this;
         }
@@ -1153,7 +1166,7 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &append(const Type &t)
         {
             sview_type sv(t);
-            _NOSTD_STRING_ASSERT(this->get_size() + sv.length() <= this->max_size(), "nostd::basic_string::append(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + sv.length() <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(sv.data(), sv.size());
             return *this;
         }
@@ -1167,7 +1180,7 @@ _NOSTD_STRING_DIAG_POP()
             sview_type sv(t);
             _NOSTD_STRING_ASSERT(pos < sv.length(), "nostd::basic_string::append(): pos out of range", std::out_of_range);
             auto ssv = sv.substr(pos, count);
-            _NOSTD_STRING_ASSERT(this->get_size() + ssv.length() <= this->max_size(), "nostd::basic_string::append(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + ssv.length() <= this->max_size(), "nostd::basic_string::append(): resulted string size would exceed max_size()", std::length_error);
             this->internal_append(ssv.data(), ssv.length());
             return *this;
         }
@@ -1177,8 +1190,8 @@ _NOSTD_STRING_DIAG_POP()
         constexpr basic_string &append_range(Range &&range)
         {
             auto str = basic_string(std::from_range, std::forward<Range>(range), this->_allocator);
-            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert_range(): size() + range_size > max_size()", std::length_error);
-            return append(str);
+            _NOSTD_STRING_ASSERT(this->get_size() + str.get_size() <= this->max_size(), "nostd::basic_string::insert_range(): resulted string size would exceed max_size()", std::length_error);
+            return this->append(str);
         }
 #endif
 
@@ -1345,7 +1358,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::replace(): pos out of range", std::out_of_range);
             count = std::min(count, this->length() - pos);
-            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): size() - count + count2 > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): resulted string size would exceed max_size()", std::length_error);
             this->internal_replace(pos, const_pointer(str), count, count2);
             return *this;
         }
@@ -1372,7 +1385,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::replace(): pos out of range", std::out_of_range);
             count = std::min(count, this->length() - pos);
-            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): size() - count + count2 > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): resulted string size would exceed max_size()", std::length_error);
             this->internal_replace(pos, ch, count, count2);
             return *this;
         }
@@ -1382,7 +1395,7 @@ _NOSTD_STRING_DIAG_POP()
             auto pos = std::distance(this->cbegin(), first);
             auto count = std::distance(first, last);
 
-            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): size() - count + count2 > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() - count + count2 <= this->max_size(), "nostd::basic_string::replace(): resulted string size would exceed max_size()", std::length_error);
             _NOSTD_STRING_ASSERT(pos <= this->get_size(), "nostd::basic_string::replace(): pos out of range", std::out_of_range);
             this->internal_replace(pos, ch, count, count2);
             return *this;
@@ -1430,7 +1443,7 @@ _NOSTD_STRING_DIAG_POP()
         constexpr iterator replace_with_range(const_iterator first, const_iterator last, Range &&range)
         {
             auto str = basic_string(std::from_range, std::forward<Range>(range), this->_allocator);
-            return replace(first, last, str); // replace checks for max_size()
+            return this->replace(first, last, str); // replace checks for max_size()
         }
 #endif
 
@@ -1448,7 +1461,7 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr void resize(size_type count, value_type ch)
         {
-            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::resize(): size() + count > max_size()", std::length_error);
+            _NOSTD_STRING_ASSERT(this->get_size() + count <= this->max_size(), "nostd::basic_string::resize(): resulted string size would exceed max_size()", std::length_error);
             auto cap = this->get_cap();
             auto sz = this->get_size();
             auto rsz = count + sz;
@@ -1669,17 +1682,17 @@ _NOSTD_STRING_DIAG_POP()
 
         friend constexpr basic_string operator+(basic_string &&lhs, const basic_string &rhs)
         {
-            return move(lhs.append(rhs));
+            return std::move(lhs.append(rhs));
         }
 
         friend constexpr basic_string operator+(const basic_string &lhs, basic_string &&rhs)
         {
-            return move(rhs.insert(0, lhs));
+            return std::move(rhs.insert(0, lhs));
         }
 
         friend constexpr basic_string operator+(basic_string &&lhs, basic_string &&rhs)
         {
-            return move(lhs.append(rhs));
+            return std::move(lhs.append(rhs));
         }
 
         friend constexpr basic_string operator+(const Char *lhs, const basic_string &rhs)
@@ -1696,7 +1709,7 @@ _NOSTD_STRING_DIAG_POP()
 
         friend constexpr basic_string operator+(const Char *lhs, basic_string &&rhs)
         {
-            return move(rhs.insert(0, lhs));
+            return std::move(rhs.insert(0, lhs));
         }
 
         friend constexpr basic_string operator+(Char lhs, const basic_string &rhs)
@@ -1713,7 +1726,7 @@ _NOSTD_STRING_DIAG_POP()
         friend constexpr basic_string operator+(Char lhs, basic_string &&rhs)
         {
             rhs.insert(rhs.begin(), lhs);
-            return move(rhs);
+            return std::move(rhs);
         }
 
         friend constexpr basic_string operator+(const basic_string &lhs, const Char *rhs)
@@ -1730,7 +1743,7 @@ _NOSTD_STRING_DIAG_POP()
 
         friend constexpr basic_string operator+(basic_string &&lhs, const Char *rhs)
         {
-            return move(lhs.append(rhs));
+            return std::move(lhs.append(rhs));
         }
 
         friend constexpr basic_string operator+(const basic_string &lhs, Char rhs)
@@ -1747,7 +1760,7 @@ _NOSTD_STRING_DIAG_POP()
         friend constexpr basic_string operator+(basic_string &&lhs, Char rhs)
         {
             lhs.push_back(rhs);
-            return move(lhs);
+            return std::move(lhs);
         }
     };
 
