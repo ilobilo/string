@@ -533,7 +533,7 @@ _NOSTD_STRING_DIAG_POP()
         {
             _NOSTD_STRING_ASSERT(pos <= str.get_size(), "nostd::basic_string::basic_string(): pos out of range", std::out_of_range);
             auto len = std::min(count, str.get_size() - pos);
-            this->internal_assign(str.data(), len);
+            this->internal_assign(str.data() + pos, len);
         }
         constexpr basic_string(const basic_string &str, size_type pos, const allocator_type &a = allocator_type()) : basic_string(str, pos, npos, a) { }
 
