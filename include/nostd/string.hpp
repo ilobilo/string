@@ -295,7 +295,7 @@ _NOSTD_STRING_DIAG_POP()
             if (is_long())
                 return storage._long.cap;
             else
-                return min_cap;
+                return min_cap - 1;
         }
 
         constexpr sview_type get_view() const noexcept
