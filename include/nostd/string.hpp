@@ -1475,18 +1475,16 @@ _NOSTD_STRING_DIAG_POP()
 
         constexpr void resize(size_type count, value_type ch)
         {
-            _NOSTD_STRING_ASSERT(get_size() + count <= max_size(), "nostd::basic_string::resize(): resulted string size would exceed max_size()", std::length_error);
-            const auto cap = get_cap();
+            _NOSTD_STRING_ASSERT(count <= max_size(), "nostd::basic_string::resize(): resulted string size would exceed max_size()", std::length_error);
             const auto sz = get_size();
-            const auto rsz = count + sz;
 
-            if (sz < rsz)
+            if (count > sz)
             {
-                if (cap < rsz)
-                    grow_to(rsz);
-                Traits::assign(get_data() + sz, count, ch);
+                if (get_cap() < count)
+                    grow_to(count);
+                Traits::assign(get_data() + sz, count - sz, ch);
             }
-            set_size(rsz);
+            set_size(count);
             null_terminate();
         }
 
